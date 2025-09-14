@@ -1,0 +1,30 @@
+﻿#include <obs-module.h>
+
+#include "create_obs_source.h"
+#include "destroy_obs_source.h"
+#include "get_obs_properties.h"
+#include "update_obs_settings.h"
+
+OBS_DECLARE_MODULE()
+OBS_MODULE_USE_DEFAULT_LOCALE("trigger", "en-US")
+
+MODULE_EXPORT const char* obs_module_description(void) { return "Trigger"; }
+
+static const char* GetName(void* const unused) { return "Trigger"; }
+
+bool obs_module_load() {
+  obs_source_info source_info = {};
+  source_info.id = "trigger";
+  source_info.type = OBS_SOURCE_TYPE_INPUT;
+  source_info.get_name = &GetName;
+  source_info.create = &trigger::CreateObsSource;
+  source_info.destroy = &trigger::DestroyObsSource;
+  source_info.get_properties = &trigger::GetObsProperties;
+  source_info.update = &trigger::UpdateObsSettings;
+
+  obs_register_source(&source_info);
+
+  return true;
+}
+
+void obs_module_unload() {}
