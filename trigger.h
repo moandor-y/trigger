@@ -1,19 +1,28 @@
 ﻿#ifndef PLUGINS_TRIGGER_TRIGGER_H_
 #define PLUGINS_TRIGGER_TRIGGER_H_
 
-#include <obs-frontend-api.h>
-
+#include <thread>
 #include <utility>
 
+#include "obs-frontend-api.h"
 #include "settings.h"
+#include "third_party/abseil-cpp/absl/base/thread_annotations.h"
+#include "third_party/abseil-cpp/absl/synchronization/mutex.h"
 
 namespace trigger {
 
-class Trigger {
+class Trigger final {
  public:
-  explicit Trigger(Settings settings) : settings_(std::move(settings)) {}
+  explicit Trigger(Settings settings);
+
+  Trigger(const Trigger&) = delete;
+  Trigger& operator=(const Trigger&) = delete;
+
+  ~Trigger();
 
   void UpdateSettings(Settings settings) {
+    absl::MutexLock lock(&mu_);
+
     settings_ = std::move(settings);
 
     obs_source_t* const scene_source = obs_frontend_get_current_scene();
@@ -28,7 +37,9 @@ class Trigger {
   }
 
  private:
-  Settings settings_ = {};
+  Settings settings_ = {} ABSL_GUARDED_BY(mu_);
+  absl::Mutex mu_;
+  std::jthread thread_;
 };
 
 }  // namespace trigger
