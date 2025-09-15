@@ -3,6 +3,7 @@
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR OFF)
+set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
 
 project(trigger)
 
@@ -16,6 +17,7 @@ add_library(trigger MODULE
     get_settings_from_obs_data.cc
     update_obs_settings.cc
     trigger.cc
+    destroy_obs_source.cc
 )
 
 target_link_libraries(trigger
@@ -24,6 +26,9 @@ target_link_libraries(trigger
         OBS::frontend-api
         absl::synchronization
         absl::time
+        absl::strings
+        absl::statusor
+        absl::log
 )
 
 set_target_properties(trigger PROPERTIES FOLDER "plugins/trigger")

@@ -5,7 +5,7 @@
 
 namespace trigger {
 
-void DestroyObsSource(void* data) { delete static_cast<Trigger*>(data); }
+void DestroyObsSource(void* data);
 
 }  // namespace trigger
 
