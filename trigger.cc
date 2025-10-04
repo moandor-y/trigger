@@ -123,6 +123,12 @@ Trigger::Trigger(Settings settings) : settings_(std::move(settings)) {
   thread_ = std::jthread([this](std::stop_token stop_token) {
     while (!stop_token.stop_requested()) {
       {
+        absl::MutexLock lock(&mu_);
+
+        if (!activated_) {
+          continue;
+        }
+
         const absl::StatusOr<std::string> current_window_title =
             GetCurrentWindowTitleUtf8();
         if (!current_window_title.ok()) {
@@ -136,8 +142,6 @@ Trigger::Trigger(Settings settings) : settings_(std::move(settings)) {
           LOG(ERROR) << current_executable_path.status();
           continue;
         }
-
-        absl::MutexLock lock(&mu_);
 
         const bool title_match =
             !settings_.window_title.empty() &&
@@ -165,6 +169,18 @@ void Trigger::UpdateSettings(Settings settings) {
   absl::MutexLock lock(&mu_);
 
   settings_ = std::move(settings);
+}
+
+void Trigger::Activate() {
+  absl::MutexLock lock(&mu_);
+
+  activated_ = true;
+}
+
+void Trigger::Deactivate() {
+  absl::MutexLock lock(&mu_);
+
+  activated_ = false;
 }
 
 }  // namespace trigger

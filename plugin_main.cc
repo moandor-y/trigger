@@ -1,7 +1,9 @@
 ﻿#include <obs-module.h>
 
+#include "activate_obs_source.h"
 #include "blog_log_sink.h"
 #include "create_obs_source.h"
+#include "deactivate_obs_source.h"
 #include "destroy_obs_source.h"
 #include "get_obs_properties.h"
 #include "third_party/abseil-cpp/absl/log/log_sink_registry.h"
@@ -25,6 +27,8 @@ bool obs_module_load() {
   source_info.destroy = &trigger::DestroyObsSource;
   source_info.get_properties = &trigger::GetObsProperties;
   source_info.update = &trigger::UpdateObsSettings;
+  source_info.activate = &trigger::ActivateObsSource;
+  source_info.deactivate = &trigger::DeactivateObsSource;
 
   obs_register_source(&source_info);
 

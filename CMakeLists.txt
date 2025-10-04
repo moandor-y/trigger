@@ -18,6 +18,8 @@ add_library(trigger MODULE
     update_obs_settings.cc
     trigger.cc
     destroy_obs_source.cc
+    activate_obs_source.cc
+    deactivate_obs_source.cc
 )
 
 target_link_libraries(trigger

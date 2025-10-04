@@ -21,9 +21,12 @@ class Trigger final {
   ~Trigger();
 
   void UpdateSettings(Settings settings);
+  void Activate();
+  void Deactivate();
 
  private:
   Settings settings_ = {} ABSL_GUARDED_BY(mu_);
+  bool activated_ = false ABSL_GUARDED_BY(mu_);
   absl::Mutex mu_;
   std::jthread thread_;
 };
