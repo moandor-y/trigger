@@ -8,6 +8,7 @@ namespace trigger {
 struct Settings {
   std::string source_name;
   std::string window_title;
+  std::string exe_name;
 };
 
 }  // namespace trigger

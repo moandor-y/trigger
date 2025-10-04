@@ -12,6 +12,8 @@ obs_properties_t* GetObsProperties(void* data) {
                           OBS_TEXT_DEFAULT);
   obs_properties_add_text(properties, "window_title", "Window title",
                           OBS_TEXT_DEFAULT);
+  obs_properties_add_text(properties, "exe_name", "Executable name",
+                          OBS_TEXT_DEFAULT);
 
   return properties;
 }

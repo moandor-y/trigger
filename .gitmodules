@@ -1,3 +1,6 @@
 [submodule "third_party/abseil-cpp"]
 	path = third_party/abseil-cpp
 	url = git@github.com:abseil/abseil-cpp.git
+[submodule "third_party/gutil"]
+	path = third_party/gutil
+	url = git@github.com:moandor-y/gutil.git

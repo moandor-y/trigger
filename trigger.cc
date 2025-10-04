@@ -1,23 +1,35 @@
 ﻿#include "trigger.h"
 
+#include <filesystem>
 #include <string>
 #include <thread>
 
+// Windows.h must be included before Psapi.h due to a bug in Psapi.h
+// clang-format off
 #include "Windows.h"
+#include "Psapi.h"
+// clang-format on
+
 #include "third_party/abseil-cpp/absl/log/log.h"
 #include "third_party/abseil-cpp/absl/status/statusor.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 #include "third_party/abseil-cpp/absl/synchronization/mutex.h"
 #include "third_party/abseil-cpp/absl/time/clock.h"
+#include "third_party/gutil/gutil/status.h"
 
 namespace trigger {
 
-static absl::StatusOr<std::string> GetCurrentWindowTitleUtf8() {
+static absl::StatusOr<HWND> GetCurrentWindowHandle() {
   const HWND foreground = GetForegroundWindow();
   if (foreground == nullptr) {
     return absl::InternalError("failed to get foreground");
   }
+  return foreground;
+}
+
+static absl::StatusOr<std::string> GetCurrentWindowTitleUtf8() {
+  ASSIGN_OR_RETURN(const HWND foreground, GetCurrentWindowHandle());
 
   const int length = GetWindowTextLengthW(foreground);
   if (length == 0) {
@@ -40,6 +52,58 @@ static absl::StatusOr<std::string> GetCurrentWindowTitleUtf8() {
   title.resize(length_written);
 
   return absl::StrFormat("%s", title);
+}
+
+static absl::StatusOr<std::string> GetExecutablePathUtf8(
+    const HANDLE process_handle) {
+  std::wstring buffer(262, L'\0');
+  while (true) {
+    const DWORD length_written =
+        GetProcessImageFileNameW(process_handle, buffer.data(), buffer.size());
+
+    if (length_written == 0) {
+      return absl::InternalError(absl::StrCat(
+          "GetProcessImageFileNameW failed, error=", GetLastError()));
+    }
+
+    if (length_written < buffer.size()) {
+      buffer.resize(length_written);
+      break;
+    }
+
+    if (buffer.size() > 32768) {
+      return absl::InternalError(
+          "GetProcessImageFileNameW buffer size exceeds limit");
+    }
+
+    buffer.resize(buffer.size() * 2);
+  }
+
+  return absl::StrFormat("%s", buffer);
+}
+
+static absl::StatusOr<std::string> GetCurrentExecutablePathUtf8() {
+  ASSIGN_OR_RETURN(const HWND foreground, GetCurrentWindowHandle());
+
+  DWORD process_id = 0;
+  {
+    const DWORD result = GetWindowThreadProcessId(foreground, &process_id);
+    if (result == 0) {
+      return absl::InternalError(
+          absl::StrCat("failed to get procedd id, error=", GetLastError()));
+    }
+  }
+
+  const HANDLE process_handle =
+      OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,  //
+                  /*bInheritHandle=*/FALSE,           //
+                  process_id);
+  if (process_handle == nullptr) {
+    return absl::InternalError(
+        absl::StrCat("failed to open process, error=", GetLastError()));
+  }
+
+  return GetExecutablePathUtf8(process_handle);
 }
 
 static void SetObsSourceVisible(const std::string& source_name,
@@ -66,9 +130,25 @@ Trigger::Trigger(Settings settings) : settings_(std::move(settings)) {
           continue;
         }
 
+        const absl::StatusOr<std::string> current_executable_path =
+            GetCurrentExecutablePathUtf8();
+        if (!current_executable_path.ok()) {
+          LOG(ERROR) << current_executable_path.status();
+          continue;
+        }
+
         absl::MutexLock lock(&mu_);
-        SetObsSourceVisible(settings_.source_name,
-                            settings_.window_title == *current_window_title);
+
+        const bool title_match =
+            !settings_.window_title.empty() &&
+            settings_.window_title == *current_window_title;
+
+        const bool exe_match =
+            !settings_.exe_name.empty() &&
+            std::filesystem::u8path(settings_.exe_name) ==
+                std::filesystem::u8path(*current_executable_path).filename();
+
+        SetObsSourceVisible(settings_.source_name, title_match || exe_match);
       }
 
       absl::SleepFor(absl::Milliseconds(100));
