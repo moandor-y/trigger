@@ -122,6 +122,8 @@ static void SetObsSourceVisible(const std::string& source_name,
 Trigger::Trigger(Settings settings) : settings_(std::move(settings)) {
   thread_ = std::jthread([this](std::stop_token stop_token) {
     while (!stop_token.stop_requested()) {
+      absl::SleepFor(absl::Milliseconds(100));
+
       {
         absl::MutexLock lock(&mu_);
 
@@ -154,8 +156,6 @@ Trigger::Trigger(Settings settings) : settings_(std::move(settings)) {
 
         SetObsSourceVisible(settings_.source_name, title_match || exe_match);
       }
-
-      absl::SleepFor(absl::Milliseconds(100));
     }
   });
 }
